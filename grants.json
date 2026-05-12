@@ -638,5 +638,45 @@
       "国際協力"
     ],
     "notes": "外務省が日本NGOを通じて途上国支援を行う無償資金協力プログラム。学校建設・教育支援・水衛生施設整備が対象になりうる。タンザニア・ウガンダともに対象国。申請・報告負担は政府案件として最高水準。"
+  },
+  {
+    "name": "NGO海外援助活動助成（一般財団法人ゆうちょ財団）",
+    "url": "https://www.yu-cho-f.jp/international/ngo_grant.html",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "region": "both",
+    "tags": [
+      "未申請",
+      "途上国支援"
+    ],
+    "notes": "一般財団法人ゆうちょ財団が提供するNGO海外援助活動助成で、海外で活動する日本のNGO団体を対象とする。2026年度募集が行われており（検索結果[9][24]）、ウガンダWASH事業・タンザニア教育事業の両方に適合する可能性がある。既存リストの「一般財団法人ゆうちょ財団」は多文化共生推進活動助成を指している可能性があり、本NGO海外援助活動助成は別プログラムとして新規扱いとする。",
+    "confidence": "medium"
+  },
+  {
+    "name": "SOMPO福祉財団 海外助成",
+    "url": "https://www.sompo-wf.org/jyosei/kaigai.html",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "region": "both",
+    "tags": [
+      "未申請",
+      "途上国支援"
+    ],
+    "notes": "SOMPO福祉財団が提供する海外助成プログラムで、途上国において社会福祉分野で活動する非営利団体を対象とする（検索結果[25]）。既存リストの「SOMPO環境財団」とは別法人・別プログラムであり、新規候補として適合する。水衛生や教育分野での活動実績があれば申請可能性がある。",
+    "confidence": "medium"
   }
 ]

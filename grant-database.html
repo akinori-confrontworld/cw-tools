@@ -283,16 +283,14 @@
 <body>
 
 <div class="header">
-  <div class="header-left" style="display:flex;align-items:center;gap:16px;">
-    <img src="./logoConfront.png" alt="コンフロントワールド" style="height:48px;width:auto;object-fit:contain;opacity:0.95;">
-    <div>
-      <h1>助成金データベース</h1>
-      <p id="header-region-desc">NPO法人コンフロントワールド ／ ウガンダ水衛生支援 対象</p>
-      <div class="header-meta" id="last-updated"></div>
-    </div>
+  <div class="header-left">
+    <h1>助成金データベース</h1>
+    <p id="header-region-desc">NPO法人コンフロントワールド ／ ウガンダ水衛生支援 対象</p>
+    <div class="header-meta" id="last-updated"></div>
   </div>
   <div class="update-area">
-    <a href="./grant-assistant.html" style="background:rgba(255,255,255,0.15);color:white;border:1.5px solid rgba(255,255,255,0.4);border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">📝 申請書ドラフト作成</a>
+    <button class="btn-update" id="btn-update" onclick="onUpdateClick()">🔄 今すぐ更新</button>
+    <div class="update-status" id="update-status"></div>
   </div>
 </div>
 
@@ -313,10 +311,6 @@
   <button class="region-tab tab-uganda" id="tab-uganda" onclick="setRegion('uganda')">🇺🇬 ウガンダ</button>
   <button class="region-tab" id="tab-tanzania" onclick="setRegion('tanzania')">🇹🇿 タンザニア</button>
   <span class="region-tab-desc" id="region-tab-desc">水・衛生支援 分野</span>
-</div>
-
-<div style="background:#ebf8ff;border-bottom:1px solid #bee3f8;padding:9px 24px;font-size:12px;color:#2c5282;">
-  🔄 このデータベースは毎月1日・15日に自動更新されます
 </div>
 
 <div class="notice-bar">
@@ -355,16 +349,6 @@
   <div class="results-count" id="count"></div>
   <div class="cards-grid" id="grid"></div>
   <div class="no-results hidden" id="empty">該当する助成金が見つかりませんでした</div>
-</div>
-
-<div style="background:#f7fafc;border-top:1px solid #e2e8f0;padding:20px 24px;margin-top:20px;text-align:center;">
-  <details style="display:inline-block;text-align:left;">
-    <summary style="font-size:11px;color:#a0aec0;cursor:pointer;user-select:none;">管理者メニュー</summary>
-    <div style="margin-top:12px;display:flex;flex-direction:column;align-items:center;gap:8px;">
-      <button class="btn-update" id="btn-update" onclick="onUpdateClick()" style="font-size:12px;padding:7px 16px;">🔄 今すぐ更新（管理者のみ）</button>
-      <div class="update-status" id="update-status" style="font-size:11px;color:#718096;text-align:center;max-width:260px;"></div>
-    </div>
-  </details>
 </div>
 
 
@@ -1010,6 +994,46 @@
       "国際協力"
     ],
     "notes": "外務省が日本NGOを通じて途上国支援を行う無償資金協力プログラム。学校建設・教育支援・水衛生施設整備が対象になりうる。タンザニア・ウガンダともに対象国。申請・報告負担は政府案件として最高水準。"
+  },
+  {
+    "name": "NGO海外援助活動助成（一般財団法人ゆうちょ財団）",
+    "url": "https://www.yu-cho-f.jp/international/ngo_grant.html",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "region": "both",
+    "tags": [
+      "未申請",
+      "途上国支援"
+    ],
+    "notes": "一般財団法人ゆうちょ財団が提供するNGO海外援助活動助成で、海外で活動する日本のNGO団体を対象とする。2026年度募集が行われており（検索結果[9][24]）、ウガンダWASH事業・タンザニア教育事業の両方に適合する可能性がある。既存リストの「一般財団法人ゆうちょ財団」は多文化共生推進活動助成を指している可能性があり、本NGO海外援助活動助成は別プログラムとして新規扱いとする。",
+    "confidence": "medium"
+  },
+  {
+    "name": "SOMPO福祉財団 海外助成",
+    "url": "https://www.sompo-wf.org/jyosei/kaigai.html",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "region": "both",
+    "tags": [
+      "未申請",
+      "途上国支援"
+    ],
+    "notes": "SOMPO福祉財団が提供する海外助成プログラムで、途上国において社会福祉分野で活動する非営利団体を対象とする（検索結果[25]）。既存リストの「SOMPO環境財団」とは別法人・別プログラムであり、新規候補として適合する。水衛生や教育分野での活動実績があれば申請可能性がある。",
+    "confidence": "medium"
   }
 ]
 </script>
