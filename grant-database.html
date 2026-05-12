@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>助成金DB｜コンフロントワールド</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1a4a72 0%, #2563a8 100%);
+      color: white;
+      padding: 20px 24px 18px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .header-left h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+    .header-left p { font-size: 13px; opacity: 0.75; margin-top: 4px; }
+    .header-meta { font-size: 11px; opacity: 0.55; margin-top: 6px; }
+
+    .update-area { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .btn-update {
+      background: white;
+      color: #1a4a72;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .btn-update:hover { opacity: 0.85; }
+    .btn-update:disabled { opacity: 0.5; cursor: not-allowed; }
+    .update-status { font-size: 11px; opacity: 0.8; text-align: right; max-width: 220px; line-height: 1.4; }
+
+    /* PAT設定モーダル */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      width: 90%;
+      max-width: 440px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal h2 { font-size: 16px; font-weight: 800; color: #1a202c; margin-bottom: 8px; }
+    .modal p { font-size: 12px; color: #718096; line-height: 1.6; margin-bottom: 16px; }
+    .modal input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: monospace;
+      margin-bottom: 12px;
+    }
+    .modal input:focus { outline: none; border-color: #1a4a72; }
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-btn-cancel {
+      padding: 8px 16px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+      background: white; font-size: 13px; cursor: pointer; color: #718096;
+    }
+    .modal-btn-ok {
+      padding: 8px 20px; border: none; border-radius: 8px;
+      background: #1a4a72; color: white; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+
+    .notice-bar {
+      background: #fffbeb;
+      border-bottom: 1px solid #f6e05e;
+      padding: 10px 24px;
+      font-size: 12px;
+      color: #744210;
+    }
+
+    .stats-bar {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 12px 24px;
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+    .stat-item { font-size: 13px; color: #718096; }
+    .stat-item strong { font-size: 20px; font-weight: 800; color: #1a4a72; margin-right: 2px; }
+
+    .controls {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 12px 24px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid #e2e8f0;
+      background: white;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #4a5568;
+      transition: all 0.15s;
+    }
+    .filter-btn:hover { background: #f7fafc; }
+    .filter-btn.active { background: #1a4a72; color: white; border-color: #1a4a72; }
+    .sort-select {
+      padding: 6px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      background: white;
+      cursor: pointer;
+      color: #4a5568;
+      margin-left: auto;
+    }
+    .search-input {
+      padding: 6px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      width: 180px;
+    }
+    .search-input:focus { outline: none; border-color: #1a4a72; }
+
+    .main { max-width: 1200px; margin: 0 auto; padding: 20px 24px; }
+    .results-count { font-size: 12px; color: #a0aec0; margin-bottom: 14px; }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.07);
+      border: 1.5px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.1); }
+    .card.stopped { opacity: 0.55; }
+    .card.unknown { border-style: dashed; }
+    .card.new-entry { border-color: #68d391; border-width: 2px; }
+
+    .new-badge-inline {
+      display: inline-block;
+      background: #c6f6d5;
+      color: #276749;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 8px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .card-title-wrap { flex: 1; min-width: 0; }
+    .card-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a202c;
+      line-height: 1.45;
+    }
+    .card-name a { color: inherit; text-decoration: none; }
+    .card-name a:hover { color: #2563a8; text-decoration: underline; }
+
+    .stars { display: flex; gap: 1px; margin-top: 4px; }
+    .star { font-size: 13px; }
+    .star.on { color: #f6ad55; }
+    .star.off { color: #e2e8f0; }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .badge-high    { background: #c6f6d5; color: #276749; }
+    .badge-midhigh { background: #bee3f8; color: #2a4365; }
+    .badge-mid     { background: #fefcbf; color: #744210; }
+    .badge-low     { background: #fed7d7; color: #742a2a; }
+    .badge-stopped { background: #e2e8f0; color: #718096; }
+    .badge-unknown { background: #e9d8fd; color: #553c9a; }
+
+    .card-amount-block { display: flex; align-items: baseline; gap: 6px; }
+    .card-amount { font-size: 22px; font-weight: 800; color: #1a4a72; }
+
+    .card-meta { display: flex; flex-direction: column; gap: 5px; }
+    .meta-row { display: flex; gap: 8px; font-size: 12px; align-items: flex-start; }
+    .meta-label { color: #a0aec0; min-width: 56px; flex-shrink: 0; padding-top: 1px; }
+    .meta-val { color: #2d3748; font-weight: 500; line-height: 1.5; }
+    .meta-val.good { color: #276749; }
+    .meta-val.bad  { color: #c53030; }
+    .meta-val.none { color: #a0aec0; }
+
+    .card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+    .tag {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      background: #ebf8ff;
+      color: #2b6cb0;
+    }
+    .tag.gray { background: #f7fafc; color: #a0aec0; }
+
+    .card-notes {
+      font-size: 11.5px;
+      color: #718096;
+      line-height: 1.55;
+      padding-top: 10px;
+      border-top: 1px solid #f7fafc;
+    }
+
+    .burden-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .burden-item { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+    .burden-label { color: #a0aec0; }
+    .burden-high { color: #c53030; font-weight: 700; }
+    .burden-mid  { color: #b7791f; font-weight: 700; }
+    .burden-low  { color: #276749; font-weight: 700; }
+    .burden-unknown { color: #a0aec0; }
+    .burden-est { font-size: 9px; color: #a0aec0; margin-left: 3px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0 3px; }
+
+    .no-results { text-align: center; padding: 60px; color: #a0aec0; font-size: 15px; }
+    .hidden { display: none !important; }
+
+    .region-tabs {
+      background: white;
+      border-bottom: 2px solid #e2e8f0;
+      padding: 10px 24px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .region-tab {
+      padding: 8px 22px;
+      border-radius: 24px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #4a5568;
+      transition: all 0.15s;
+    }
+    .region-tab:hover { background: #f7fafc; }
+    .region-tab.tab-uganda { background: #1a4a72; color: white; border-color: #1a4a72; }
+    .region-tab.tab-tanzania { background: #2d6a4f; color: white; border-color: #2d6a4f; }
+    .region-tab-desc { font-size: 11px; color: #a0aec0; margin-left: 6px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>助成金データベース</h1>
+    <p id="header-region-desc">NPO法人コンフロントワールド ／ ウガンダ水衛生支援 対象</p>
+    <div class="header-meta" id="last-updated"></div>
+  </div>
+  <div class="update-area">
+    <a href="./grant-assistant.html" style="background:rgba(255,255,255,0.15);color:white;border:1.5px solid rgba(255,255,255,0.4);border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">📝 申請書ドラフト作成</a>
+    <button class="btn-update" id="btn-update" onclick="onUpdateClick()">🔄 今すぐ更新</button>
+    <div class="update-status" id="update-status"></div>
+  </div>
+</div>
+
+<!-- PAT入力モーダル -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>GitHub Token を設定</h2>
+    <p>初回のみ必要です。GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens で発行してください。<br><br>権限：<strong>Actions → Read and write</strong> のみでOKです。</p>
+    <input type="password" id="pat-input" placeholder="github_pat_xxxx...">
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="modal-btn-ok" onclick="savePat()">保存して更新</button>
+    </div>
+  </div>
+</div>
+
+<div class="region-tabs">
+  <button class="region-tab tab-uganda" id="tab-uganda" onclick="setRegion('uganda')">🇺🇬 ウガンダ</button>
+  <button class="region-tab" id="tab-tanzania" onclick="setRegion('tanzania')">🇹🇿 タンザニア</button>
+  <span class="region-tab-desc" id="region-tab-desc">水・衛生支援 分野</span>
+</div>
+
+<div class="notice-bar">
+  ⚠️ 報告負担・申請工数の「推定」表示はAIによる試算です。実際の難易度や条件は各助成金の公式サイトでご確認ください。
+</div>
+
+<div class="stats-bar">
+  <div class="stat-item"><strong id="s-total">—</strong>件掲載</div>
+  <div class="stat-item">採択可能性「高」<strong id="s-high">—</strong>件</div>
+  <div class="stat-item">新規発見<strong id="s-new">—</strong>件</div>
+  <div class="stat-item">最大<strong id="s-max">—</strong>万円</div>
+  <div class="stat-item">CW累計採択額 <strong>約2,326</strong>万円</div>
+</div>
+
+<div class="controls">
+  <div class="filter-group" id="filter-group">
+    <button class="filter-btn active" data-f="all">すべて</button>
+    <button class="filter-btn" data-f="high">★★★★★ 高</button>
+    <button class="filter-btn" data-f="midhigh">★★★★ 中〜高</button>
+    <button class="filter-btn" data-f="mid">★★★ 中</button>
+    <button class="filter-btn" data-f="low">★★ 低</button>
+    <button class="filter-btn" data-f="unknown">未申請</button>
+    <button class="filter-btn" data-f="stopped">停止中</button>
+    <button class="filter-btn" data-f="new">🆕 新着</button>
+  </div>
+  <input type="text" class="search-input" id="search" placeholder="🔍 検索">
+  <select class="sort-select" id="sort">
+    <option value="adoption">採択可能性順</option>
+    <option value="amount">金額（高い順）</option>
+    <option value="deadline">締切月順</option>
+    <option value="new">新着順</option>
+  </select>
+</div>
+
+<div class="main">
+  <div class="results-count" id="count"></div>
+  <div class="cards-grid" id="grid"></div>
+  <div class="no-results hidden" id="empty">該当する助成金が見つかりませんでした</div>
+</div>
+
+
+
+<script id="grant-data" type="application/json">
+[
+  {
+    "name": "TOTO水環境基金",
+    "url": "https://jp.toto.com/company/csr/mizukikin/",
+    "amount": "〜400万円",
+    "amountN": 400,
+    "adoption": "high",
+    "stars": 5,
+    "deadline": "7〜8月",
+    "deadlineN": 8,
+    "record": "採択4回（第17・18・20・21回）",
+    "recordType": "good",
+    "status": "active",
+    "reportBurden": "high",
+    "applyEffort": "mid",
+    "tags": [
+      "水衛生",
+      "ウガンダ",
+      "継続実績"
+    ],
+    "notes": "最多採択実績。3年以上連続受給は「進化・波及」の説明が必要。報告書の負担は重め（書類・郵送・締切集中）。次回は第22回（2026年夏締切予定）。",
+    "region": "uganda"
+  },
+  {
+    "name": "日水コン水財団",
+    "url": "https://mizuinfra.or.jp/joseishien.html",
+    "amount": "〜200万円",
+    "amountN": 200,
+    "adoption": "high",
+    "stars": 4,
+    "deadline": "4月中旬",
+    "deadlineN": 4,
+    "record": "採択1回（2024年度160万）、不採択3回",
+    "recordType": "good",
+    "status": "active",
+    "reportBurden": "high",
+    "applyEffort": "mid",
+    "tags": [
+      "水衛生",
+      "ウガンダ"
+    ],
+    "notes": "水・衛生に特化した財団。2024年度初採択。報告書の負担が特に重く、締切当日に作業が集中しやすい。2026年度は提出間に合わず。",
+    "region": "uganda"
+  },
+  {
+    "name": "JICS NGO支援事業",
+    "url": "https://www.jics.or.jp/jigyou/ngo/",
+    "amount": "〜100万円",
+    "amountN": 100,
+    "adoption": "high",
+    "stars": 4,
+    "deadline": "7月末",
+    "deadlineN": 7,
+    "record": "採択1回（2024年度100万）",
+    "recordType": "good",
+    "status": "active",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "ウガンダ",
+      "分野幅広"
+    ],
+    "notes": "2024年度に初採択。分野が幅広く申請しやすい。2026年度も申請済み・結果待ち中。中間報告＋完了報告が必要。",
+    "region": "uganda"
+  },
+  {
+    "name": "JICA世界の人びとのための基金",
+    "url": "https://www.jica.go.jp/partner/private/kifu/09.html",
+    "amount": "〜100万円",
+    "amountN": 100,
+    "adoption": "midhigh",
+    "stars": 3,
+    "deadline": "3月（要確認）",
+    "deadlineN": 3,
+    "record": "採択1回（2022年度100万）",
+    "recordType": "good",
+    "status": "conditional",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "ウガンダ",
+      "衛生教育"
+    ],
+    "notes": "建設事業は対象外・衛生教育は対象。JICA草の根技術協力との併願不可。2022年度以降の申請状況不明。募集状況を要確認。",
+    "region": "uganda"
+  },
+  {
+    "name": "アフリカ支援基金（一般社団法人アフリカ協会）",
+    "url": "https://africasociety.or.jp/index.php/support/support03",
+    "amount": "総額500万（複数団体）",
+    "amountN": 100,
+    "adoption": "midhigh",
+    "stars": 3,
+    "deadline": "10月末",
+    "deadlineN": 10,
+    "record": "採択1回（2024年度50万）",
+    "recordType": "good",
+    "status": "active",
+    "reportBurden": "low",
+    "applyEffort": "mid",
+    "tags": [
+      "ウガンダ",
+      "アフリカ"
+    ],
+    "notes": "アフリカ地域への親和性が高い。推薦書の提出が必要。1件あたりの金額は小さめだが採択しやすい。",
+    "region": "both"
+  },
+  {
+    "name": "ひろしま・祈りの石国際教育交流財団",
+    "url": "http://www.peace-stone.org/body-1.html",
+    "amount": "〜150万円",
+    "amountN": 150,
+    "adoption": "mid",
+    "stars": 3,
+    "deadline": "11月末",
+    "deadlineN": 11,
+    "record": "採択3回（タンザニア実績）、ウガンダ未申請",
+    "recordType": "good",
+    "status": "active",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "タンザニア実績",
+      "ウガンダ未申請"
+    ],
+    "notes": "タンザニアで連続採択実績あり。ウガンダで申請したことはないが、水・衛生分野として申請価値は十分ある。",
+    "region": "both"
+  },
+  {
+    "name": "外務省NGO事業補助金",
+    "url": "https://www.mofa.go.jp/mofaj/gaiko/oda/shimin/oda_ngo/shien/hojyokin_g.html",
+    "amount": "〜70万円",
+    "amountN": 70,
+    "adoption": "mid",
+    "stars": 2,
+    "deadline": "4月中旬",
+    "deadlineN": 4,
+    "record": "不採択3回（書類選考止まり）",
+    "recordType": "bad",
+    "status": "active",
+    "reportBurden": "high",
+    "applyEffort": "high",
+    "tags": [
+      "ウガンダ",
+      "小規模"
+    ],
+    "notes": "書類が多く運営が大変。不採択が続いているが申請難易度は低め。金額が小さい。2025年度は提出したが不採択。",
+    "region": "both"
+  },
+  {
+    "name": "maaaru",
+    "url": "https://www.maaaru.org",
+    "amount": "〜100万円",
+    "amountN": 100,
+    "adoption": "mid",
+    "stars": 2,
+    "deadline": "随時",
+    "deadlineN": 99,
+    "record": "採択1回（タンザニア・100万）",
+    "recordType": "good",
+    "status": "active",
+    "reportBurden": "low",
+    "applyEffort": "low",
+    "tags": [
+      "タンザニア実績"
+    ],
+    "notes": "タンザニアで採択実績あり。ウガンダでも申請可能か要確認。日本寄付財団が運営。",
+    "region": "both"
+  },
+  {
+    "name": "大阪コミュニティ財団",
+    "url": "http://www.osaka-community.or.jp/contents/grant/index.htm",
+    "amount": "指定なし（実績40〜70万）",
+    "amountN": 60,
+    "adoption": "mid",
+    "stars": 2,
+    "deadline": "11月末",
+    "deadlineN": 11,
+    "record": "採択2回（タンザニア）",
+    "recordType": "good",
+    "status": "active",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "タンザニア実績"
+    ],
+    "notes": "タンザニアで2回採択実績あり。途上国支援分野があるが、アジア中心のためウガンダは見せ方の工夫が必要。",
+    "region": "both"
+  },
+  {
+    "name": "街の灯支援事業（アーユス仏教国際協力NW）",
+    "url": "http://ngo-ayus.jp/ngo/ngo_city_lights/",
+    "amount": "〜50万円",
+    "amountN": 50,
+    "adoption": "mid",
+    "stars": 2,
+    "deadline": "12月",
+    "deadlineN": 12,
+    "record": "不採択1回（タンザニア）",
+    "recordType": "bad",
+    "status": "active",
+    "reportBurden": "low",
+    "applyEffort": "low",
+    "tags": [
+      "ウガンダ",
+      "小規模"
+    ],
+    "notes": "1回のみ不採択。対象分野には合っている。金額は小さいが申請書の負担も軽め。",
+    "region": "both"
+  },
+  {
+    "name": "岩佐賞",
+    "url": "https://sdgs-iwasazaidan.com/detail#entry",
+    "amount": "100〜1,000万円",
+    "amountN": 500,
+    "adoption": "low",
+    "stars": 1,
+    "deadline": "5月・12月（年2回）",
+    "deadlineN": 5,
+    "record": "不採択4回（すべて書類選考止まり）",
+    "recordType": "bad",
+    "status": "active",
+    "reportBurden": "high",
+    "applyEffort": "high",
+    "tags": [
+      "ウガンダ",
+      "高額"
+    ],
+    "notes": "採択されれば高額。4回連続で書類選考を突破できず。申請戦略の見直しか、スキップを検討。",
+    "region": "both"
+  },
+  {
+    "name": "アフリカ協会服部禮次郎アフリカ基金",
+    "url": "https://africasociety.or.jp/index.php/support/support01",
+    "amount": "総額150万（複数団体）",
+    "amountN": 50,
+    "adoption": "low",
+    "stars": 1,
+    "deadline": "9月末",
+    "deadlineN": 9,
+    "record": "不採択4回（書類選考止まり）",
+    "recordType": "bad",
+    "status": "active",
+    "reportBurden": "low",
+    "applyEffort": "mid",
+    "tags": [
+      "ウガンダ",
+      "アフリカ"
+    ],
+    "notes": "面接まで行ったことがある（2021年頃）。4回連続不採択。申請を続けるか再検討推奨。",
+    "region": "both"
+  },
+  {
+    "name": "パタゴニア環境助成金プログラム",
+    "url": "https://fields.canpan.info/grant/detail/1820",
+    "amount": "75〜300万円",
+    "amountN": 200,
+    "adoption": "low",
+    "stars": 1,
+    "deadline": "7月（2026年度募集なしの可能性）",
+    "deadlineN": 7,
+    "record": "過去4回見送り（未提出）",
+    "recordType": "none",
+    "status": "conditional",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "ウガンダ",
+      "環境"
+    ],
+    "notes": "環境分野がメイン。2026年度は募集なしの可能性あり。水衛生との整合性に工夫が必要。",
+    "region": "uganda"
+  },
+  {
+    "name": "一般財団法人ゆうちょ財団",
+    "url": "https://www.yu-cho-f.jp/international/ngo_grant.html",
+    "amount": "〜100万円",
+    "amountN": 100,
+    "adoption": "low",
+    "stars": 1,
+    "deadline": "10〜11月",
+    "deadlineN": 10,
+    "record": "不採択2回（書類選考止まり）",
+    "recordType": "bad",
+    "status": "active",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "ウガンダ"
+    ],
+    "notes": "2回連続で書類選考落ち。申請書の見直しが必要。",
+    "region": "both"
+  },
+  {
+    "name": "東京SVP",
+    "url": "https://www.svptokyo.org/",
+    "amount": "〜100万円",
+    "amountN": 100,
+    "adoption": "low",
+    "stars": 1,
+    "deadline": "3月末",
+    "deadlineN": 3,
+    "record": "不採択3回（書類選考止まり）",
+    "recordType": "bad",
+    "status": "active",
+    "reportBurden": "high",
+    "applyEffort": "high",
+    "tags": [
+      "ウガンダ"
+    ],
+    "notes": "3回連続で書類選考落ち。国内NPO向けのニュアンスが強く、海外支援との相性を再検討。SVPは採択後も定期的なプレゼン・インパクト測定が求められる。",
+    "region": "both"
+  },
+  {
+    "name": "LUSHチャリティバンク",
+    "url": "https://weare.lush.com/jp/lush-life/our-giving/charity-pot/charitybank-guideline/",
+    "amount": "10〜200万円",
+    "amountN": 100,
+    "adoption": "stopped",
+    "stars": 0,
+    "deadline": "隔月末",
+    "deadlineN": 99,
+    "record": "不採択複数回（新規申請受付停止中）",
+    "recordType": "bad",
+    "status": "stopped",
+    "reportBurden": "low",
+    "applyEffort": "low",
+    "tags": [
+      "停止中"
+    ],
+    "notes": "現在新規申請受付停止中。再開した場合は優先度高で検討。",
+    "region": "both"
+  },
+  {
+    "name": "SOMPO環境財団",
+    "url": "https://www.sompo-ef.org/",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請",
+    "recordType": "none",
+    "status": "unknown",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "未申請",
+      "環境"
+    ],
+    "notes": "環境・社会課題への助成実績あり。水衛生支援との親和性を要確認。損保系財団は中間・完了報告が標準的。",
+    "region": "both"
+  },
+  {
+    "name": "笹川平和財団",
+    "url": "https://www.spf.org/",
+    "amount": "要確認",
+    "amountN": 200,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請",
+    "recordType": "none",
+    "status": "unknown",
+    "reportBurden": "high",
+    "applyEffort": "high",
+    "tags": [
+      "未申請",
+      "国際協力"
+    ],
+    "notes": "国際協力・平和関連の助成実績あり。プログラム適合性を要確認。権威ある大型財団のため申請書の完成度・報告書の詳細度ともに高水準が求められる。",
+    "region": "both"
+  },
+  {
+    "name": "立正佼成会 一食平和基金",
+    "url": "https://www.kosei-kai.or.jp/katsudo/initiatives/ichijiki/",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請",
+    "recordType": "none",
+    "status": "unknown",
+    "reportBurden": "low",
+    "applyEffort": "low",
+    "tags": [
+      "未申請",
+      "人道支援"
+    ],
+    "notes": "人道支援・開発援助への助成実績あり。国際協力分野に親和性が高い。宗教系財団のため申請・報告ともに比較的シンプルな傾向。",
+    "region": "both"
+  },
+  {
+    "name": "花王みらい共生財団",
+    "url": "https://www.kao-lih-foundation.com",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認（公募なしの可能性）",
+    "deadlineN": 99,
+    "record": "未申請（衛生材料での協力を検討中）",
+    "recordType": "none",
+    "status": "unknown",
+    "reportBurden": "mid",
+    "applyEffort": "high",
+    "tags": [
+      "未申請",
+      "衛生"
+    ],
+    "notes": "衛生・水環境との親和性がある。公募は行っていない可能性あり。事前相談から始めることを推奨。公募外のため関係構築に工数がかかる。",
+    "region": "uganda"
+  },
+  {
+    "name": "地球環境基金助成金（独立行政法人環境再生保全機構）",
+    "url": "https://www.erca.go.jp/jfge/subsidy/index.html",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "reportBurden": "high",
+    "applyEffort": "mid",
+    "tags": [
+      "未申請",
+      "水衛生",
+      "環境"
+    ],
+    "notes": "独立行政法人環境再生保全機構が運営する地球環境基金の助成金。途上国での環境・水関連活動が対象となりうる。ウガンダでのWASH事業との適合性を要確認。行政系のため成果指標・中間・完了報告が詳細で重い傾向。",
+    "confidence": "medium",
+    "region": "uganda"
+  },
+  {
+    "name": "トヨタ財団 国際助成プログラム（2026年度）",
+    "url": "https://www.toyotafound.or.jp/grant/international/",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "reportBurden": "mid",
+    "applyEffort": "high",
+    "tags": [
+      "未申請",
+      "国際協力"
+    ],
+    "notes": "トヨタ財団が提供する国際助成プログラム。開発途上国における社会課題解決を対象とする可能性があり、ウガンダのWASH事業との適合性を公式サイトで要確認。倍率が高く申請書の完成度が問われる。",
+    "confidence": "medium",
+    "region": "both"
+  },
+  {
+    "name": "日本財団 海外の事業（海外における人道活動や人材育成事業）",
+    "url": "https://www.nippon-foundation.or.jp/grant_application/programs/overseas",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "未申請",
+      "国際協力",
+      "人道支援"
+    ],
+    "notes": "日本財団による海外での人道支援・人材育成事業への助成プログラム。日本国外における公益事業が対象。ウガンダでの水衛生支援事業との適合性を要確認。日本財団は大規模だが申請・報告の仕組みが整備されており比較的対応しやすい。",
+    "confidence": "medium",
+    "region": "both"
+  },
+  {
+    "name": "Panasonic NPO/NGOサポートファンド for SDGs 2026年",
+    "url": "https://www.janic.org/blog/information_category/grant/",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "未申請",
+      "SDGs",
+      "国際協力"
+    ],
+    "notes": "SDGs関連活動を行うNPO/NGOが対象。ウガンダのWASH事業との適合性を公式サイトで要確認。Panasonicは申請フォームがオンライン化されており比較的対応しやすい傾向。",
+    "confidence": "medium",
+    "region": "both"
+  },
+  {
+    "name": "公益財団法人住友財団 助成プログラム",
+    "url": "https://www.sumitomo.or.jp/",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "reportBurden": "mid",
+    "applyEffort": "mid",
+    "tags": [
+      "未申請",
+      "環境",
+      "国際交流"
+    ],
+    "notes": "住友財団は環境・国際交流等の分野で公募による助成を行う公益財団法人。海外途上国支援や環境分野での活動が対象となりうる。ウガンダのWASH事業への適合性を公式サイトで要確認。財閥系財団は申請書の質が問われるが報告は標準的。",
+    "confidence": "medium",
+    "region": "both"
+  },
+  {
+    "name": "公益信託 今井記念海外協力基金",
+    "url": "https://www.imai-kikin.com/guideline.html",
+    "amount": "〜100万円程度（総額650万円）",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "tags": [
+      "未申請",
+      "水衛生",
+      "海外支援",
+      "途上国"
+    ],
+    "notes": "海外での国際協力活動を行うNGO・NPOへの助成を行う公益信託。2026年度の助成対象期間は2026年4月〜2027年3月。ウガンダでの水衛生支援事業は対象になりうる可能性が高い。",
+    "confidence": "medium",
+    "region": "both"
+  },
+  {
+    "name": "公益財団法人 三菱財団 助成プログラム",
+    "url": "https://www.mitsubishi-zaidan.jp/",
+    "amount": "要確認",
+    "amountN": 100,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "tags": [
+      "未申請",
+      "海外支援",
+      "途上国"
+    ],
+    "notes": "公益財団法人三菱財団が提供する助成プログラム。複数分野で公募を行っており、海外途上国支援・水衛生分野への適合性は要確認。公式サイトで分野別の詳細を確認する必要がある。",
+    "confidence": "medium",
+    "region": "both"
+  },
+  {
+    "name": "公益財団法人三菱UFJ国際財団 公募助成金",
+    "url": "https://www.npo-fujinokuni.jp/jyoseidb/公益財団法人三菱ufj国際財団-2026年度公募助成金/",
+    "amount": "〜50万円",
+    "amountN": 50,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "要確認",
+    "deadlineN": 99,
+    "record": "未申請（2026年05月12日自動発見）",
+    "recordType": "none",
+    "status": "unknown",
+    "tags": [
+      "未申請",
+      "海外支援",
+      "途上国"
+    ],
+    "notes": "2026年度公募助成金として案内されており、NPO・NGOが申請可能。助成額は50万円以内。ウガンダでの海外支援活動への適合性は公式サイトで詳細確認が必要。",
+    "confidence": "medium",
+    "region": "both"
+  },
+  {
+    "name": "JICA草の根技術協力（パートナー型）",
+    "url": "https://www.jica.go.jp/partner/grassroots/index.html",
+    "amount": "〜2,000万円（3年間）",
+    "amountN": 667,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "年1〜2回（要確認）",
+    "deadlineN": 99,
+    "record": "未申請",
+    "recordType": "none",
+    "status": "unknown",
+    "region": "both",
+    "reportBurden": "high",
+    "applyEffort": "high",
+    "tags": [
+      "未申請",
+      "教育",
+      "国際協力",
+      "能力強化"
+    ],
+    "notes": "JICAが地方自治体・NGO等と連携して実施する草の根レベルの技術協力プログラム。教育・衛生・農業等の分野でタンザニアを含む途上国での事業が対象。大型案件だが申請・実施負担は非常に大きい。"
+  },
+  {
+    "name": "外務省日本NGO連携無償資金協力（N連）",
+    "url": "https://www.mofa.go.jp/mofaj/gaiko/oda/shimin/oda_ngo/shien/nrenkei.html",
+    "amount": "〜数千万円",
+    "amountN": 1000,
+    "adoption": "unknown",
+    "stars": 0,
+    "deadline": "随時（要確認）",
+    "deadlineN": 99,
+    "record": "未申請",
+    "recordType": "none",
+    "status": "unknown",
+    "region": "both",
+    "reportBurden": "high",
+    "applyEffort": "high",
+    "tags": [
+      "未申請",
+      "教育",
+      "学校建設",
+      "国際協力"
+    ],
+    "notes": "外務省が日本NGOを通じて途上国支援を行う無償資金協力プログラム。学校建設・教育支援・水衛生施設整備が対象になりうる。タンザニア・ウガンダともに対象国。申請・報告負担は政府案件として最高水準。"
+  }
+]
+</script>
+
+<script>
+const G = JSON.parse(document.getElementById('grant-data').textContent);
+
+const NEW_THRESHOLD_DAYS = 60;
+
+function burdenHtml(level, label, estimated) {
+  const map = {
+    high:    { cls: 'burden-high',    text: '🔴 重い' },
+    mid:     { cls: 'burden-mid',     text: '🟡 普通' },
+    low:     { cls: 'burden-low',     text: '🟢 軽め' },
+    unknown: { cls: 'burden-unknown', text: '❓ 不明' },
+  };
+  const d = map[level] || map['unknown'];
+  const est = estimated ? `<span class="burden-est">推定</span>` : '';
+  return `<div class="burden-item"><span class="burden-label">${label}</span><span class="${d.cls}">${d.text}</span>${est}</div>`;
+}
+
+function isNew(g) {
+  if (!g.record) return false;
+  const m = g.record.match(/(\d{4})年(\d{2})月(\d{2})日自動発見/);
+  if (!m) return false;
+  const found = new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+  const diff = (new Date() - found) / (1000 * 60 * 60 * 24);
+  return diff <= NEW_THRESHOLD_DAYS;
+}
+
+const ADOPTION_ORDER = { high:6, midhigh:5, mid:4, low:3, unknown:2, stopped:1 };
+const BADGE_CLASS = {
+  high:"badge-high", midhigh:"badge-midhigh", mid:"badge-mid",
+  low:"badge-low", stopped:"badge-stopped", unknown:"badge-unknown"
+};
+const BADGE_LABEL = {
+  high:"採択可能性 高", midhigh:"採択可能性 中〜高", mid:"採択可能性 中",
+  low:"採択可能性 低", stopped:"新規停止中", unknown:"未申請・要調査"
+};
+
+let curFilter = 'all';
+let curSort   = 'adoption';
+let curSearch = '';
+let curRegion = 'uganda';
+
+function setRegion(region) {
+  curRegion = region;
+  document.getElementById('tab-uganda').className =
+    'region-tab' + (region === 'uganda' ? ' tab-uganda' : '');
+  document.getElementById('tab-tanzania').className =
+    'region-tab' + (region === 'tanzania' ? ' tab-tanzania' : '');
+  const desc = region === 'uganda' ? '水・衛生支援 分野' : '教育支援・学校建設 分野';
+  document.getElementById('region-tab-desc').textContent = desc;
+  document.getElementById('header-region-desc').textContent =
+    region === 'uganda'
+      ? 'NPO法人コンフロントワールド ／ ウガンダ水衛生支援 対象'
+      : 'NPO法人コンフロントワールド ／ タンザニア教育支援 対象';
+  curFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.f === 'all')
+  );
+  updateStats();
+  render();
+}
+
+function stars(n) {
+  let s = '';
+  for (let i = 1; i <= 5; i++)
+    s += `<span class="star ${i<=n?'on':'off'}">★</span>`;
+  return `<div class="stars">${s}</div>`;
+}
+
+function filtered() {
+  let d = G.filter(g => g.region === curRegion || g.region === 'both');
+  if (curFilter === 'new') {
+    d = d.filter(g => isNew(g));
+  } else if (curFilter !== 'all') {
+    d = d.filter(g => g.adoption === curFilter);
+  }
+  if (curSearch) {
+    const q = curSearch.toLowerCase();
+    d = d.filter(g => g.name.toLowerCase().includes(q) || g.notes.toLowerCase().includes(q) || g.tags.join(' ').toLowerCase().includes(q));
+  }
+  if (curSort === 'adoption')
+    d.sort((a,b) => (ADOPTION_ORDER[b.adoption]-ADOPTION_ORDER[a.adoption]) || (b.amountN-a.amountN));
+  else if (curSort === 'amount')
+    d.sort((a,b) => b.amountN - a.amountN);
+  else if (curSort === 'deadline')
+    d.sort((a,b) => a.deadlineN - b.deadlineN);
+  else if (curSort === 'new')
+    d.sort((a,b) => (isNew(b)?1:0) - (isNew(a)?1:0));
+  return d;
+}
+
+function render() {
+  const d = filtered();
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+  document.getElementById('count').textContent = `${d.length}件表示中`;
+
+  if (!d.length) { grid.innerHTML=''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  grid.innerHTML = d.map(g => {
+    const isStopped  = g.status === 'stopped';
+    const isUnknown  = g.status === 'unknown';
+    const isNewEntry = isNew(g);
+    const recClass   = g.recordType === 'good' ? 'good' : g.recordType === 'bad' ? 'bad' : 'none';
+    const tagHtml    = g.tags.map(t => `<span class="tag ${(isStopped||isUnknown)?'gray':''}">${t}</span>`).join('');
+    const newBadge   = isNewEntry ? '<span class="new-badge-inline">🆕 新着</span>' : '';
+    return `
+    <div class="card ${isStopped?'stopped':''} ${isUnknown?'unknown':''} ${isNewEntry?'new-entry':''}">
+      <div class="card-header">
+        <div class="card-title-wrap">
+          <div class="card-name"><a href="${g.url}" target="_blank" rel="noopener">${g.name}</a>${newBadge}</div>
+          ${stars(g.stars)}
+        </div>
+        <span class="badge ${BADGE_CLASS[g.adoption]}">${BADGE_LABEL[g.adoption]}</span>
+      </div>
+
+      <div>
+        <div class="card-amount-block">
+          <div class="card-amount">${g.amount}</div>
+        </div>
+      </div>
+
+      <div class="card-meta">
+        <div class="meta-row">
+          <span class="meta-label">締切時期</span>
+          <span class="meta-val">${g.deadline}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">CW実績</span>
+          <span class="meta-val ${recClass}">${g.record}</span>
+        </div>
+      </div>
+
+      <div class="burden-row">
+        ${burdenHtml(g.reportBurden, '報告負担', !g.record.includes('採択') && !g.record.includes('不採択'))}
+        ${burdenHtml(g.applyEffort, '申請工数', !g.record.includes('採択') && !g.record.includes('不採択'))}
+      </div>
+
+      <div class="card-tags">${tagHtml}</div>
+
+      <div class="card-notes">${g.notes}</div>
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  const regionData = G.filter(g => g.region === curRegion || g.region === 'both');
+  const newCount = regionData.filter(g => isNew(g)).length;
+  document.getElementById('s-total').textContent = regionData.length;
+  document.getElementById('s-high').textContent  = regionData.filter(g=>g.adoption==='high').length;
+  document.getElementById('s-new').textContent   = newCount;
+  document.getElementById('s-max').textContent   = Math.max(...regionData.map(g=>g.amountN));
+
+  const el = document.getElementById('last-updated');
+  const dates = G.map(g => {
+    const m = g.record && g.record.match(/(\d{4})年(\d{2})月(\d{2})日自動発見/);
+    return m ? new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3])) : null;
+  }).filter(Boolean);
+  if (dates.length) {
+    const latest = new Date(Math.max(...dates));
+    el.textContent = `最終自動更新：${latest.getFullYear()}年${latest.getMonth()+1}月${latest.getDate()}日`;
+  }
+}
+
+document.getElementById('filter-group').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  curFilter = btn.dataset.f;
+  render();
+});
+
+document.getElementById('sort').addEventListener('change', e => { curSort = e.target.value; render(); });
+document.getElementById('search').addEventListener('input', e => { curSearch = e.target.value; render(); });
+
+updateStats();
+render();
+
+// --- 更新ボタン ---
+const REPO = 'akinori-confrontworld/weekly-report-bot';
+const WORKFLOW = 'grant_discovery.yml';
+
+function onUpdateClick() {
+  const pat = localStorage.getItem('github_pat');
+  if (!pat) {
+    document.getElementById('modal').classList.add('open');
+  } else {
+    triggerWorkflow(pat);
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function savePat() {
+  const pat = document.getElementById('pat-input').value.trim();
+  if (!pat) return;
+  localStorage.setItem('github_pat', pat);
+  closeModal();
+  triggerWorkflow(pat);
+}
+
+async function triggerWorkflow(pat) {
+  const btn = document.getElementById('btn-update');
+  const status = document.getElementById('update-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ 起動中...';
+  status.textContent = '';
+
+  try {
+    const resp = await fetch(
+      `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${pat}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ref: 'main' }),
+      }
+    );
+
+    if (resp.status === 204) {
+      btn.textContent = '✅ 更新開始';
+      status.textContent = '2〜3分後に git pull してリロードしてください';
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = '🔄 今すぐ更新';
+      }, 60000);
+    } else if (resp.status === 401) {
+      localStorage.removeItem('github_pat');
+      btn.disabled = false;
+      btn.textContent = '🔄 今すぐ更新';
+      status.textContent = '❌ Token が無効です。もう一度クリックして再入力してください';
+    } else {
+      btn.disabled = false;
+      btn.textContent = '🔄 今すぐ更新';
+      status.textContent = `❌ エラー（${resp.status}）が発生しました`;
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '🔄 今すぐ更新';
+    status.textContent = '❌ 通信エラー。インターネット接続を確認してください';
+  }
+}
+</script>
+</body>
+</html>

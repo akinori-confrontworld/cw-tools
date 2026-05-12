@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>助成金申請書アシスタント｜コンフロントワールド</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a4a72 0%, #2563a8 100%);
+      color: white;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .header-title h1 { font-size: 18px; font-weight: 800; }
+    .header-title p  { font-size: 12px; opacity: .7; margin-top: 3px; }
+
+    /* API key bar */
+    .apikey-bar {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .apikey-bar label { font-size: 12px; color: #718096; font-weight: 600; white-space: nowrap; }
+    .apikey-input {
+      flex: 1;
+      min-width: 220px;
+      padding: 6px 10px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    .apikey-input:focus { outline: none; border-color: #2563a8; }
+    .apikey-status {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+    .apikey-status.ok  { background: #c6f6d5; color: #276749; }
+    .apikey-status.ng  { background: #fed7d7; color: #742a2a; }
+
+    /* Layout */
+    .app-body {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 24px;
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .app-body { grid-template-columns: 1fr; }
+    }
+
+    /* Panel */
+    .panel {
+      background: white;
+      border-radius: 14px;
+      border: 1.5px solid #e2e8f0;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #f0f4f8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-title { font-size: 13px; font-weight: 700; color: #1a4a72; }
+    .panel-body { padding: 16px 18px; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #cbd5e0;
+      border-radius: 10px;
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      margin-bottom: 14px;
+    }
+    .drop-zone:hover, .drop-zone.over { border-color: #2563a8; background: #ebf4ff; }
+    .drop-icon { font-size: 32px; margin-bottom: 8px; }
+    .drop-zone p { font-size: 13px; color: #4a5568; }
+    .drop-zone span { font-size: 11px; color: #a0aec0; display: block; margin-top: 4px; }
+    .drop-zone input[type=file] { display: none; }
+    .file-loaded { font-size: 12px; color: #276749; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .file-loaded .file-clear { cursor: pointer; color: #c53030; font-size: 14px; margin-left: auto; }
+
+    /* Divider */
+    .divider { text-align: center; font-size: 11px; color: #a0aec0; margin: 12px 0; position: relative; }
+    .divider::before, .divider::after { content:''; display:inline-block; width:calc(50% - 24px); height:1px; background:#e2e8f0; vertical-align: middle; margin: 0 6px; }
+
+    /* Paste area */
+    .paste-area {
+      width: 100%;
+      min-height: 120px;
+      padding: 10px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      resize: vertical;
+      font-family: inherit;
+      color: #2d3748;
+    }
+    .paste-area:focus { outline: none; border-color: #2563a8; }
+    .paste-area::placeholder { color: #a0aec0; }
+
+    /* Char count */
+    .char-count { font-size: 11px; color: #a0aec0; text-align: right; margin-top: 4px; }
+    .char-count.warn { color: #e07b00; }
+
+    /* Org info toggle */
+    .toggle-btn {
+      font-size: 11px;
+      color: #2563a8;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      padding: 0;
+    }
+    .org-info-area {
+      width: 100%;
+      height: 160px;
+      padding: 10px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 11px;
+      resize: vertical;
+      font-family: monospace;
+      color: #2d3748;
+      margin-top: 10px;
+    }
+    .org-info-area:focus { outline: none; border-color: #2563a8; }
+
+    /* Generate button */
+    .btn-generate {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1a4a72, #2563a8);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 14px;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-generate:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    .btn-generate:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* Right panel: results */
+    .results-panel { min-height: 400px; }
+
+    /* Empty state */
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      color: #a0aec0;
+    }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* Loading */
+    .loading {
+      padding: 60px 20px;
+      text-align: center;
+      color: #4a5568;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #2563a8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { font-size: 14px; }
+    .loading small { font-size: 12px; color: #a0aec0; margin-top: 6px; display: block; }
+
+    /* Results header */
+    .results-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #f0f4f8;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .grant-name-badge {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1a4a72;
+      flex: 1;
+    }
+    .btn-copy-all {
+      padding: 6px 14px;
+      background: #2563a8;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-copy-all:hover { background: #1a4a72; }
+
+    /* Field cards */
+    .fields-list { padding: 14px 18px; display: flex; flex-direction: column; gap: 16px; }
+
+    .field-card {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .field-card-header {
+      background: #f7fafc;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .field-num {
+      width: 22px; height: 22px;
+      background: #2563a8;
+      color: white;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .field-label { font-size: 13px; font-weight: 700; color: #1a202c; flex: 1; }
+    .field-hint { font-size: 11px; color: #718096; font-weight: 400; }
+
+    .field-card-body { padding: 12px 14px; }
+    .field-answer {
+      width: 100%;
+      min-height: 80px;
+      padding: 8px 10px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.65;
+      resize: vertical;
+      font-family: inherit;
+      color: #1a202c;
+      transition: border-color .15s;
+    }
+    .field-answer:focus { outline: none; border-color: #2563a8; }
+
+    .field-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    .field-charcount { font-size: 11px; color: #a0aec0; }
+    .btn-copy-field {
+      padding: 4px 10px;
+      background: none;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      color: #718096;
+      font-weight: 600;
+      transition: all .15s;
+    }
+    .btn-copy-field:hover { background: #ebf4ff; border-color: #2563a8; color: #2563a8; }
+    .btn-copy-field.copied { background: #c6f6d5; border-color: #38a169; color: #276749; }
+
+    /* Error */
+    .error-box {
+      margin: 16px 18px;
+      padding: 12px 14px;
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #742a2a;
+    }
+
+    /* Tag */
+    .tag-new { background: #fefcbf; color: #744210; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <h1>助成金申請書アシスタント</h1>
+    <p>申請書をアップロード → AIが各項目の回答案を自動生成</p>
+  </div>
+</div>
+
+<!-- API Key bar -->
+<div class="apikey-bar">
+  <label>Claude API Key</label>
+  <input type="password" class="apikey-input" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+  <span class="apikey-status ng" id="apikeyStatus">未設定</span>
+  <span style="font-size:11px;color:#a0aec0;">キーはこのページ内のみで使用・保存されます</span>
+</div>
+
+<div class="app-body">
+
+  <!-- Left: Input Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">申請書を読み込む</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- Drop zone -->
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-icon">📄</div>
+        <p>PDF・Word(.docx)・テキストをドロップ</p>
+        <span>またはクリックしてファイルを選択</span>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.doc">
+      </div>
+
+      <!-- File loaded indicator -->
+      <div class="file-loaded" id="fileLoaded" style="display:none;">
+        <span>📎</span>
+        <span id="fileLoadedName"></span>
+        <span class="file-clear" id="fileClear" title="クリア">✕</span>
+      </div>
+
+      <div class="divider">または テキストを貼り付け</div>
+
+      <textarea class="paste-area" id="pasteArea"
+        placeholder="申請書のテキストをここに貼り付けてください...
+
+例：
+■ 事業名
+■ 事業の目的（300字以内）
+■ 対象地域
+■ 対象者・受益者数
+■ 実施期間
+■ 予算概要
+..."></textarea>
+      <div class="char-count" id="pasteCount">0 文字</div>
+
+      <!-- Org info -->
+      <div style="margin-top:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:12px;font-weight:700;color:#4a5568;">団体情報（AIに渡す情報）</span>
+          <button class="toggle-btn" id="orgToggle">編集する ▼</button>
+        </div>
+        <textarea class="org-info-area" id="orgInfo" style="display:none;"></textarea>
+      </div>
+
+      <button class="btn-generate" id="generateBtn" disabled>
+        ✨ AIで回答案を生成する
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Right: Results Panel -->
+  <div class="panel results-panel" id="resultsPanel">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">📝</div>
+      <p>左側に申請書をアップロードして<br>「生成する」を押すと<br>各項目の回答案が表示されます</p>
+    </div>
+    <div style="display:none;" id="loadingState">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>AIが申請書を解析しています...</p>
+        <small>項目を抽出して回答案を作成中です（30秒〜1分）</small>
+      </div>
+    </div>
+    <div style="display:none;" id="resultsState">
+      <div class="results-header">
+        <span class="grant-name-badge" id="grantNameBadge">—</span>
+        <button class="btn-copy-all" id="copyAllBtn">全項目をコピー</button>
+      </div>
+      <div class="fields-list" id="fieldsList"></div>
+    </div>
+    <div style="display:none;" id="errorState">
+      <div class="error-box" id="errorMsg"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---- PDF.js worker ----
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ---- Default org info ----
+const DEFAULT_ORG_INFO = `# NPO法人コンフロントワールド 基本情報
+
+## 団体概要
+- 団体名: NPO法人コンフロントワールド
+- 代表理事: 荒井昭則（民間企業プロダクトマネージャー兼任）
+- 活動開始: 2018年（ウガンダ支援開始）
+- 所在地: 日本（東京）
+- 連絡先: a.arai@confrontworld.org
+- HP: confrontworld.org
+
+## ビジョン・ミッション
+新しい支援の形を現場で実験・記録して広げる。規模追求型ではなく、先駆者的な存在として現場で試したことを他国や大きな団体に広げるモデルを目指す。
+
+## 活動地域・現地パートナー
+- メイン: ウガンダ共和国ブタンバラ県カランバ郡
+- 現地パートナー: JEDOVC（Joint Effort for Development Opportunity and Voluntary Community）。MOU締結済み・2018年から継続協働
+- ブタンバラ県庁と行政連携も進めている
+- サブ: タンザニア（別チームが担当）
+
+## 主な活動内容（ウガンダ）
+- 貯水タンクの建設・設置（雨水集水型）
+- 浄水フィルターの設置
+- トイレ（屋外便所）の建設（複数棟）
+- 手洗い装置（ティッピータップ等）の提供・設置
+- 石鹸生産研修（若者の収入機会創出と地域内での衛生用品の安定供給）
+- 衛生教育（手洗い・トイレ利用・感染症予防の啓発）
+
+## 累計実績（2018年〜2025年）
+- 水アクセス改善: 1,200人以上
+- トイレ建設: 239棟
+- 手洗いアクセス: 26,248人
+- 石鹸生産研修: 25名参加（HIV/AIDSの影響を受けた若者等）
+- 支援対象校の例: Buyenga小学校（350名）、Gombe standard primary（40名）、Ntolomwe小学校 等
+
+## ブタンバラ県の課題データ
+- 全世帯数: 31,208世帯
+- 改善された飲料水源にアクセスできる世帯: 81.8%（残り18.2%が未アクセス）
+- 改善された衛生設備を使用している世帯: 53.7%（残り46.3%が不十分）
+- 主な課題: 水汲み時間の長さ・トイレ不足・手洗い設備不足・感染症リスク
+
+## 助成金採択実績
+- TOTO水環境基金: 4回採択（第17・18・20・21回、総額約1,260万円）
+- 日水コン水財団（公益財団法人水・地域イノベーション財団）: 採択（160万円）
+- JICS NGO支援事業: 採択（100万円）
+- JICA世界の人びとのための基金: 採択（100万円）
+- アフリカ支援基金（一般社団法人アフリカ協会）: 採択（50万円）
+- ひろしま・祈りの石国際教育交流財団: 3回採択（タンザニア）
+- 大阪コミュニティ財団: 2回採択（タンザニア）
+- maaaru（日本寄付財団）: 採択（100万円・タンザニア）
+
+## 組織体制
+- 代表理事: 荒井昭則
+- 対外連絡担当: 岩尾さん（JICS/TOTO等との対外連絡・意思決定）
+- 現地連絡担当: 木場さん（Dickson/JEDOVCとの連絡窓口）
+- 財務担当: Asayoさん（送金管理・経費処理）
+- 広報・運営担当: 山下さん
+- プロボノ・副業型メンバー中心の運営体制
+
+## 財務規模
+- 年間事業費: 外部助成金が約50%以上を占める
+- 主な資金源: 助成金・マンスリーパートナー（月額寄附者）・企業寄付
+- 現在進行中の助成金: TOTO第21回（2026年度）・JICS 2026年度（結果待ち）・アフリカ支援基金
+`;
+
+// ---- State ----
+let formText = '';
+let apiKey   = '';
+
+// ---- Init ----
+const orgInfoEl  = document.getElementById('orgInfo');
+const pasteAreaEl = document.getElementById('pasteArea');
+orgInfoEl.value  = DEFAULT_ORG_INFO;
+
+// Load saved API key
+const savedKey = localStorage.getItem('cw_claude_apikey') || '';
+if (savedKey) {
+  document.getElementById('apiKeyInput').value = savedKey;
+  apiKey = savedKey;
+  updateApiKeyStatus(true);
+}
+
+// ---- API Key ----
+document.getElementById('apiKeyInput').addEventListener('input', e => {
+  apiKey = e.target.value.trim();
+  const ok = apiKey.startsWith('sk-ant-');
+  localStorage.setItem('cw_claude_apikey', apiKey);
+  updateApiKeyStatus(ok);
+  updateGenerateBtn();
+});
+
+function updateApiKeyStatus(ok) {
+  const el = document.getElementById('apikeyStatus');
+  el.textContent = ok ? '設定済み ✓' : (apiKey ? '形式が違います' : '未設定');
+  el.className   = 'apikey-status ' + (ok ? 'ok' : 'ng');
+}
+
+// ---- Org info toggle ----
+let orgVisible = false;
+document.getElementById('orgToggle').addEventListener('click', () => {
+  orgVisible = !orgVisible;
+  orgInfoEl.style.display = orgVisible ? 'block' : 'none';
+  document.getElementById('orgToggle').textContent = orgVisible ? '閉じる ▲' : '編集する ▼';
+});
+
+// ---- Drop zone ----
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+document.getElementById('fileClear').addEventListener('click', () => {
+  formText = '';
+  fileInput.value = '';
+  document.getElementById('fileLoaded').style.display = 'none';
+  dropZone.style.display = '';
+  updateGenerateBtn();
+});
+
+// ---- Paste area ----
+pasteAreaEl.addEventListener('input', () => {
+  const len = pasteAreaEl.value.length;
+  const el = document.getElementById('pasteCount');
+  el.textContent = len.toLocaleString() + ' 文字';
+  el.className = 'char-count' + (len > 8000 ? ' warn' : '');
+  updateGenerateBtn();
+});
+
+function getFormText() {
+  return formText || pasteAreaEl.value.trim();
+}
+
+function updateGenerateBtn() {
+  const hasForm = getFormText().length > 0;
+  const hasKey  = apiKey.startsWith('sk-ant-');
+  document.getElementById('generateBtn').disabled = !(hasForm && hasKey);
+}
+
+// ---- File loading ----
+async function loadFile(file) {
+  const name = file.name;
+  const ext  = name.split('.').pop().toLowerCase();
+  showFileLoaded(name, '読み込み中...');
+
+  try {
+    if (ext === 'pdf') {
+      formText = await extractPDF(file);
+    } else if (ext === 'docx' || ext === 'doc') {
+      formText = await extractDOCX(file);
+    } else if (ext === 'txt') {
+      formText = await file.text();
+    } else {
+      alert('PDF・Word(.docx)・テキスト(.txt)ファイルに対応しています');
+      return;
+    }
+    showFileLoaded(name, `${formText.length.toLocaleString()}文字 読み込み完了`);
+    updateGenerateBtn();
+  } catch(err) {
+    showFileLoaded(name, '読み込みエラー: ' + err.message);
+  }
+}
+
+function showFileLoaded(name, status) {
+  dropZone.style.display = 'none';
+  const el = document.getElementById('fileLoaded');
+  el.style.display = 'flex';
+  document.getElementById('fileLoadedName').textContent = `${name}（${status}）`;
+}
+
+async function extractPDF(file) {
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
+  }
+  return text;
+}
+
+async function extractDOCX(file) {
+  const buffer = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: buffer });
+  return result.value;
+}
+
+// ---- Generate ----
+document.getElementById('generateBtn').addEventListener('click', generate);
+
+async function generate() {
+  const form = getFormText();
+  if (!form) return;
+
+  setState('loading');
+
+  const prompt = `あなたはNPO法人コンフロントワールドの助成金申請書作成をサポートするAIアシスタントです。
+
+【団体情報】
+${orgInfoEl.value}
+
+【申請書の内容】
+${form}
+
+---
+
+上記の申請書から記入が必要な項目をすべて抽出し、団体情報をもとに各項目の回答案を作成してください。
+
+以下のルールに従ってください：
+- 数値・固有名詞・実績はできる限り団体情報から引用する
+- 文字数制限がある場合はそれに合わせた長さで書く
+- 具体的に書く（「活動します」ではなく「貯水タンクを2基設置し、350名の児童が水汲みの必要がなくなります」のように）
+- 「要確認」「要記入」など、団体で確認が必要な箇所は明記する
+- 空欄・記入不要・既記入の項目はスキップする
+
+必ず以下のJSON形式のみで返答してください（JSON以外のテキストは含めないでください）：
+{
+  "grantName": "助成金・財団名（申請書から読み取れる場合）",
+  "fields": [
+    {
+      "label": "項目名",
+      "hint": "文字数制限や記入要領など（なければ空文字）",
+      "answer": "回答案（具体的に記述）"
+    }
+  ]
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-7',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API Error ${res.status}`);
+    }
+
+    const data = await res.json();
+    const raw  = data.content[0].text.trim();
+
+    // Parse JSON (handle markdown code blocks)
+    const jsonStr = raw.replace(/^```json?\s*/i, '').replace(/```\s*$/, '').trim();
+    const parsed  = JSON.parse(jsonStr);
+
+    renderResults(parsed);
+    setState('results');
+
+  } catch(err) {
+    document.getElementById('errorMsg').textContent = 'エラー: ' + err.message;
+    setState('error');
+  }
+}
+
+// ---- Render results ----
+function renderResults({ grantName, fields }) {
+  document.getElementById('grantNameBadge').textContent =
+    grantName || '助成金申請書';
+
+  const list = document.getElementById('fieldsList');
+  list.innerHTML = fields.map((f, i) => `
+    <div class="field-card">
+      <div class="field-card-header">
+        <div class="field-num">${i + 1}</div>
+        <div class="field-label">${escHtml(f.label)}</div>
+        ${f.hint ? `<span class="field-hint">${escHtml(f.hint)}</span>` : ''}
+      </div>
+      <div class="field-card-body">
+        <textarea class="field-answer" id="ans_${i}" rows="${Math.min(12, Math.max(3, Math.ceil(f.answer.length / 40)))}">${escHtml(f.answer)}</textarea>
+        <div class="field-footer">
+          <span class="field-charcount" id="cc_${i}">${f.answer.length} 文字</span>
+          <button class="btn-copy-field" onclick="copyField(${i})">コピー</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // Char count update
+  fields.forEach((_, i) => {
+    document.getElementById(`ans_${i}`).addEventListener('input', e => {
+      document.getElementById(`cc_${i}`).textContent = e.target.value.length + ' 文字';
+    });
+  });
+}
+
+// ---- Copy ----
+function copyField(i) {
+  const ta  = document.getElementById(`ans_${i}`);
+  const btn = ta.closest('.field-card').querySelector('.btn-copy-field');
+  navigator.clipboard.writeText(ta.value).then(() => {
+    btn.textContent = 'コピー済み ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+document.getElementById('copyAllBtn').addEventListener('click', () => {
+  const cards = document.querySelectorAll('.field-card');
+  let text = '';
+  cards.forEach(card => {
+    const label = card.querySelector('.field-label').textContent;
+    const ans   = card.querySelector('.field-answer').value;
+    text += `■ ${label}\n${ans}\n\n`;
+  });
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    const btn = document.getElementById('copyAllBtn');
+    btn.textContent = 'コピー済み ✓';
+    setTimeout(() => btn.textContent = '全項目をコピー', 2000);
+  });
+});
+
+// ---- State management ----
+function setState(state) {
+  document.getElementById('emptyState').style.display   = state === 'empty'   ? '' : 'none';
+  document.getElementById('loadingState').style.display  = state === 'loading'  ? '' : 'none';
+  document.getElementById('resultsState').style.display  = state === 'results'  ? '' : 'none';
+  document.getElementById('errorState').style.display    = state === 'error'    ? '' : 'none';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- Init ----
+updateGenerateBtn();
+</script>
+</body>
+</html>
